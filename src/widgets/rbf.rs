@@ -2,8 +2,7 @@
 use druid::widget::Widget;
 use druid::{BoxConstraints, Geometry, HandlerCtx, Id, LayoutCtx, LayoutResult, PaintCtx, Ui};
 
-use kurbo::Rect;
-use piet::{FillRule, ImageFormat, InterpolationMode, RenderContext};
+use piet::{ImageFormat, InterpolationMode, RenderContext};
 
 use std::any::Any;
 

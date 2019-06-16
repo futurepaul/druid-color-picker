@@ -1,13 +1,13 @@
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 
-use druid::widget::{Column, EventForwarder, Label, Padding, Slider};
+use druid::widget::{Column, EventForwarder, Padding, Slider};
 use druid::{UiMain, UiState};
 
 use druid::Id;
 
 pub mod widgets;
-use widgets::{HSL, RBF, WhichHSL};
+use widgets::{HSL, WhichHSL};
 
 #[derive(Clone, Copy, Debug)]
 struct AppState {
@@ -36,7 +36,7 @@ fn main() {
 
     let mut app = AppState { h: 0.5, s: 0.5, l: 0.5 };
 
-    let color_grid = widgets::HSL::new().ui(&mut state);
+    let color_grid = HSL::new().ui(&mut state);
     let color_grid_padded = pad(color_grid, &mut state);
 
     let slider_hue = Slider::new(app.h).ui(&mut state);

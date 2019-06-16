@@ -2,7 +2,7 @@ use druid::widget::Widget;
 use druid::{BoxConstraints, MouseEvent, Geometry, HandlerCtx, Id, LayoutCtx, LayoutResult, PaintCtx, Ui};
 
 use kurbo::Rect;
-use piet::{FillRule, ImageFormat, InterpolationMode, RenderContext};
+use piet::{ImageFormat, InterpolationMode, RenderContext};
 
 use std::any::Any;
 
@@ -27,9 +27,9 @@ fn hue_to_rgb(p: f64, q: f64, t: f64) -> f64 {
 }
 
 fn hsl_to_rgb(h: f64, s: f64, l: f64) -> (u8, u8, u8, u8) {
-    let mut r;
-    let mut g;
-    let mut b;
+    let r;
+    let g;
+    let b;
 
     if s == 0.0 {
         r = l;
@@ -53,10 +53,10 @@ fn hsl_to_rgb(h: f64, s: f64, l: f64) -> (u8, u8, u8, u8) {
 }
 
 pub enum Converter {
-    HSL_H(f64),
-    HSL_S(f64),
-    HSL_L(f64),
-    HSL_SL(f64, f64)
+    HslH(f64),
+    HslS(f64),
+    HslL(f64),
+    HslSL(f64, f64)
 }
 
 fn xy_to_rgb(width: usize, height: usize, converter: Converter) -> Vec<u8> {
@@ -69,10 +69,10 @@ fn xy_to_rgb(width: usize, height: usize, converter: Converter) -> Vec<u8> {
 
             // Where the magic happens
             let color = match converter {
-                Converter::HSL_H(hue) => hsl_to_rgb(hue, x_ratio, y_ratio),
-                Converter::HSL_S(saturation) => hsl_to_rgb(x_ratio, saturation, y_ratio),
-                Converter::HSL_L(luminosity) => hsl_to_rgb(x_ratio, y_ratio, luminosity),
-                Converter::HSL_SL(saturation, luminosity) => hsl_to_rgb(x_ratio, saturation, luminosity),
+                Converter::HslH(hue) => hsl_to_rgb(hue, x_ratio, y_ratio),
+                Converter::HslS(saturation) => hsl_to_rgb(x_ratio, saturation, y_ratio),
+                Converter::HslL(luminosity) => hsl_to_rgb(x_ratio, y_ratio, luminosity),
+                Converter::HslSL(saturation, luminosity) => hsl_to_rgb(x_ratio, saturation, luminosity),
             };
             // let color = (converter)(x_ratio, y_ratio);
 
@@ -125,7 +125,7 @@ impl Widget for HSL {
         let image_data = xy_to_rgb(
             BOX_HEIGHT as usize,
             BOX_HEIGHT as usize,
-            Converter::HSL_H(self.hue),
+            Converter::HslH(self.hue),
         );
 
         let image = paint_ctx
@@ -157,7 +157,7 @@ impl Widget for HSL {
         let (x, y) = (x as f64, y as f64);
 
         // TODO: constrain the cursor!
-        let (width, height) = geom.size;
+        let (_width, _height) = geom.size;
 
         let (cursor_x, cursor_y) = (x + self.cursor.0, y + self.cursor.1);
         let outer_rect = Rect::new(
