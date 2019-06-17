@@ -1,5 +1,7 @@
 use druid::widget::Widget;
-use druid::{BoxConstraints, MouseEvent, Geometry, HandlerCtx, Id, LayoutCtx, LayoutResult, PaintCtx, Ui};
+use druid::{
+    BoxConstraints, Geometry, HandlerCtx, Id, LayoutCtx, LayoutResult, MouseEvent, PaintCtx, Ui,
+};
 
 use kurbo::Rect;
 use piet::{ImageFormat, InterpolationMode, RenderContext};
@@ -56,7 +58,7 @@ pub enum Converter {
     HslH(f64),
     HslS(f64),
     HslL(f64),
-    HslSL(f64, f64)
+    HslSL(f64, f64),
 }
 
 fn xy_to_rgb(width: usize, height: usize, converter: Converter) -> Vec<u8> {
@@ -72,7 +74,9 @@ fn xy_to_rgb(width: usize, height: usize, converter: Converter) -> Vec<u8> {
                 Converter::HslH(hue) => hsl_to_rgb(hue, x_ratio, y_ratio),
                 Converter::HslS(saturation) => hsl_to_rgb(x_ratio, saturation, y_ratio),
                 Converter::HslL(luminosity) => hsl_to_rgb(x_ratio, y_ratio, luminosity),
-                Converter::HslSL(saturation, luminosity) => hsl_to_rgb(x_ratio, saturation, luminosity),
+                Converter::HslSL(saturation, luminosity) => {
+                    hsl_to_rgb(x_ratio, saturation, luminosity)
+                }
             };
             // let color = (converter)(x_ratio, y_ratio);
 
@@ -88,18 +92,17 @@ fn xy_to_rgb(width: usize, height: usize, converter: Converter) -> Vec<u8> {
 
 const BOX_HEIGHT: f64 = 256.;
 
-
 pub struct HSL {
     hue: f64,
     saturation: f64,
     luminosity: f64,
-    cursor: (f64, f64)
+    cursor: (f64, f64),
 }
 
 pub enum WhichHSL {
     Hue(f64),
     Saturation(f64),
-    Luminosity(f64)
+    Luminosity(f64),
 }
 
 impl HSL {
@@ -108,7 +111,7 @@ impl HSL {
             hue: 0.5,
             saturation: 0.5,
             luminosity: 0.5,
-            cursor: (7., 5.)
+            cursor: (7., 5.),
         }
     }
     pub fn ui(self, ctx: &mut Ui) -> Id {
@@ -138,8 +141,6 @@ impl Widget for HSL {
             )
             .unwrap();
 
-        
-
         paint_ctx.render_ctx.draw_image(
             &image,
             ((x, y), (x + BOX_HEIGHT, y + BOX_HEIGHT)),
@@ -160,25 +161,15 @@ impl Widget for HSL {
         let (_width, _height) = geom.size;
 
         let (cursor_x, cursor_y) = (x + self.cursor.0, y + self.cursor.1);
-        let outer_rect = Rect::new(
-            cursor_x,
-            cursor_y,
-            cursor_x + 6.,
-            cursor_y + 6.,
-        );
+        let outer_rect = Rect::new(cursor_x, cursor_y, cursor_x + 6., cursor_y + 6.);
 
-        let inner_rect = Rect::new(
-            cursor_x + 1.,
-            cursor_y + 1.,
-            cursor_x + 5.,
-            cursor_y + 5.,
-        );
+        let inner_rect = Rect::new(cursor_x + 1., cursor_y + 1., cursor_x + 5., cursor_y + 5.);
 
         paint_ctx
             .render_ctx
             .stroke(outer_rect, &black_brush, 1., None);
 
-                    paint_ctx
+        paint_ctx
             .render_ctx
             .stroke(inner_rect, &white_brush, 1., None);
     }
@@ -186,37 +177,61 @@ impl Widget for HSL {
     fn mouse(&mut self, event: &MouseEvent, ctx: &mut HandlerCtx) -> bool {
         dbg!(event);
 
-        //Feels better to move this a bit up and to the left of the click
-        self.cursor = (event.x as f64 - 5., event.y as f64 - 5.);
+        if event.count == 1 {
 
-        let x_ratio = event.x as f64 / BOX_HEIGHT as f64;
-        let y_ratio = event.y as f64 / BOX_HEIGHT as f64;
+            ctx.set_active(true);
 
-        // dbg!(hsl_to_rgb(self.hue, x_ratio, y_ratio));
-        self.saturation = x_ratio;
-        self.luminosity = y_ratio;
-        
+            //Feels better to move this a bit up and to the left of the click
+            self.cursor = (event.x as f64 - 5., event.y as f64 - 5.);
+
+            let x_ratio = event.x as f64 / BOX_HEIGHT as f64;
+            let y_ratio = event.y as f64 / BOX_HEIGHT as f64;
+
+            self.saturation = x_ratio;
+            self.luminosity = y_ratio;
+            ctx.send_event((self.saturation, self.luminosity));
+        } else {
+            ctx.set_active(false);
+        }
         ctx.invalidate();
-        dbg!(hsl_to_rgb(self.hue, self.saturation, self.luminosity));
+        // dbg!(hsl_to_rgb(self.hue, self.saturation, self.luminosity));
         true
+    }
+
+    fn mouse_moved(&mut self, x: f32, y: f32, ctx: &mut HandlerCtx) {
+        if ctx.is_active() {
+            //Feels better to move this a bit up and to the left of the click
+            self.cursor = (x as f64 - 5., y as f64 - 5.);
+
+            let x_ratio = x as f64 / BOX_HEIGHT as f64;
+            let y_ratio = y as f64 / BOX_HEIGHT as f64;
+
+            self.saturation = x_ratio;
+            self.luminosity = y_ratio;
+            ctx.send_event((self.saturation, self.luminosity));
+            ctx.invalidate();
+        }
     }
 
     fn layout(
         &mut self,
         bc: &BoxConstraints,
         _children: &[Id],
-        _size: Option<(f32, f32)>,
+        size: Option<(f32, f32)>,
         _ctx: &mut LayoutCtx,
     ) -> LayoutResult {
-        LayoutResult::Size(bc.constrain((BOX_HEIGHT as f32, BOX_HEIGHT as f32)))
+        match size {
+            Some(size) => LayoutResult::Size(bc.constrain(size)),
+            None => LayoutResult::Size((BOX_HEIGHT as f32, BOX_HEIGHT as f32))
+        }
     }
 
     fn poke(&mut self, payload: &mut Any, ctx: &mut HandlerCtx) -> bool {
         if let Some(value) = payload.downcast_ref::<WhichHSL>() {
             match value {
-                WhichHSL::Hue(val) => { self.hue = *val },
-                WhichHSL::Saturation(val) => { self.saturation = *val },
-                WhichHSL::Luminosity(val) => { self.luminosity = *val }
+                WhichHSL::Hue(val) => self.hue = *val,
+                WhichHSL::Saturation(val) => self.saturation = *val,
+                WhichHSL::Luminosity(val) => self.luminosity = *val,
             }
             self.cursor = (self.saturation * BOX_HEIGHT, self.luminosity * BOX_HEIGHT);
             ctx.invalidate();

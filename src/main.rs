@@ -1,13 +1,13 @@
 use druid_shell::platform::WindowBuilder;
 use druid_shell::win_main;
 
-use druid::widget::{Column, EventForwarder, Padding, Slider};
+use druid::widget::{Button, Column, EventForwarder, Padding};
 use druid::{UiMain, UiState};
 
 use druid::Id;
 
 pub mod widgets;
-use widgets::{HSL, WhichHSL};
+use widgets::{Slider, WhichHSL, HSL, Slider2D};
 
 #[derive(Clone, Copy, Debug)]
 struct AppState {
@@ -24,7 +24,8 @@ fn pad(widget: Id, state: &mut UiState) -> Id {
 pub enum Action {
     SetH(f64),
     SetS(f64),
-    SetL(f64)
+    SetL(f64),
+    SetSL(f64, f64)
 }
 
 fn main() {
@@ -34,10 +35,25 @@ fn main() {
     let mut builder = WindowBuilder::new();
     let mut state = UiState::new();
 
-    let mut app = AppState { h: 0.5, s: 0.5, l: 0.5 };
+    let mut app = AppState {
+        h: 0.5,
+        s: 0.5,
+        l: 0.5,
+    };
 
     let color_grid = HSL::new().ui(&mut state);
     let color_grid_padded = pad(color_grid, &mut state);
+
+    // let slider_hue = Slider::new(app.h).ui(&mut state);
+    // let slider_hue = CustomSlider::new(app.h).ui(
+    //     &[
+    //         HSL::new().ui(&mut state),
+    //         Button::new("Slide").ui(&mut state),
+    //     ],
+    //     &mut state,
+    // );
+    // let slider_hue = Slider2D::new(0.1, 0.5).ui(&mut state);
+    // let slider_hue_padded = pad(slider_hue, &mut state);
 
     let slider_hue = Slider::new(app.h).ui(&mut state);
     let slider_hue_padded = pad(slider_hue, &mut state);
@@ -45,11 +61,19 @@ fn main() {
     let slider_saturation = Slider::new(app.s).ui(&mut state);
     let slider_sat_padded = pad(slider_saturation, &mut state);
 
-    let slider_luminosity = Slider::new(app.s).ui(&mut state);
+    let slider_luminosity = Slider::new(app.l).ui(&mut state);
     let slider_lum_padded = pad(slider_luminosity, &mut state);
 
     let column = Column::new();
-    let panel = column.ui(&[color_grid_padded, slider_hue_padded, slider_sat_padded, slider_lum_padded], &mut state);
+    let panel = column.ui(
+        &[
+            color_grid_padded,
+            slider_hue_padded,
+            slider_sat_padded,
+            slider_lum_padded,
+        ],
+        &mut state,
+    );
 
     state.add_listener(slider_hue, move |value: &mut f64, mut ctx| {
         ctx.poke_up(&mut Action::SetH(*value));
@@ -63,6 +87,11 @@ fn main() {
         ctx.poke_up(&mut Action::SetL(*value));
     });
 
+    state.add_listener(color_grid, move |value: &mut (f64, f64), mut ctx| {
+        let (s, l) = value;
+        ctx.poke_up(&mut Action::SetSL(*s, *l));
+    });
+
     let forwarder = EventForwarder::<Action>::new().ui(panel, &mut state);
 
     state.add_listener(
@@ -71,14 +100,22 @@ fn main() {
             Action::SetH(h) => {
                 app.h = *h;
                 ctx.poke(color_grid, &mut WhichHSL::Hue(app.h));
-            },
+            }
             Action::SetS(s) => {
                 app.s = *s;
                 ctx.poke(color_grid, &mut WhichHSL::Saturation(app.s));
-            },
+            }
             Action::SetL(l) => {
                 app.l = *l;
                 ctx.poke(color_grid, &mut WhichHSL::Luminosity(app.l));
+            }
+            Action::SetSL(s,l) => {
+                // dbg!(&h, &l);
+                app.s = *s;
+                app.l = *l;
+                // dbg!(&app.l, &app.h);
+                ctx.poke(slider_saturation, &mut app.s);
+                ctx.poke(slider_luminosity, &mut app.l);
             }
         },
     );
